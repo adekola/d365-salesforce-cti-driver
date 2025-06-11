@@ -1,0 +1,125 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CCaaS CTI Driver Test</title>
+</head>
+<body>
+    <h1>Microsoft Dynamics 365 Contact Center - Salesforce CTI Integration</h1>
+    
+    <div id="status">
+        <h2>Integration Status</h2>
+        <p id="cti-status">❌ CTI Driver: Not Loaded</p>
+        <p id="salesforce-status">❌ Salesforce OpenCTI: Not Loaded</p>
+        <p id="ccaas-status">❌ CCaaS SDK: Not Loaded</p>
+    </div>
+
+    <div id="instructions">
+        <h2>Integration Instructions</h2>
+        <ol>
+            <li><strong>Upload SFExampleCTIDriver.js to your CDN</strong></li>
+            <li><strong>Configure Salesforce Call Center with URL:</strong>
+                <pre>https://ccaas-embed-prod.azureedge.net/widget/index.html?dynamicsUrl=&lt;YOUR_D365_URL&gt;&amp;ctiDriverUrl=&lt;YOUR_CDN_URL&gt;</pre>
+            </li>
+            <li><strong>Set up Remote Site Settings in Salesforce:</strong>
+                <ul>
+                    <li>https://ccaas-embed-prod.azureedge.net</li>
+                    <li>Your CDN domain</li>
+                    <li>Your Dynamics 365 domain</li>
+                </ul>
+            </li>
+            <li><strong>Assign Call Center permissions to users</strong></li>
+        </ol>
+    </div>
+
+    <div id="testing" style="display: none;">
+        <h2>Test Functions</h2>
+        <button onclick="testScreenPop()">Test Screen Pop</button>
+        <button onclick="testClickToDial()">Test Click-to-Dial</button>
+        <button onclick="testPresence()">Test Presence</button>
+    </div>
+
+    <!-- Load the CTI Driver -->
+    <script src="./SFExampleCTIDriver.js"></script>
+    
+    <script>
+        // Check integration status
+        function updateStatus() {
+            // Check CTI Driver
+            if (window.CCaaS && window.CCaaS.CTIDriver) {
+                document.getElementById('cti-status').innerHTML = '✅ CTI Driver: Loaded';
+                document.getElementById('cti-status').style.color = 'green';
+            }
+
+            // Check Salesforce OpenCTI (only available in Salesforce context)
+            if (window.sforce && window.sforce.opencti) {
+                document.getElementById('salesforce-status').innerHTML = '✅ Salesforce OpenCTI: Loaded';
+                document.getElementById('salesforce-status').style.color = 'green';
+                document.getElementById('testing').style.display = 'block';
+            } else {
+                document.getElementById('salesforce-status').innerHTML = '⚠️ Salesforce OpenCTI: Not Available (Expected outside Salesforce)';
+                document.getElementById('salesforce-status').style.color = 'orange';
+            }
+
+            // Check CCaaS SDK (loaded by CCaaS widget)
+            if (window.Microsoft && window.Microsoft.CCaaS && window.Microsoft.CCaaS.EmbedSDK) {
+                document.getElementById('ccaas-status').innerHTML = '✅ CCaaS SDK: Loaded';
+                document.getElementById('ccaas-status').style.color = 'green';
+            } else {
+                document.getElementById('ccaas-status').innerHTML = '⚠️ CCaaS SDK: Not Available (Loaded by CCaaS widget)';
+                document.getElementById('ccaas-status').style.color = 'orange';
+            }
+        }
+
+        // Test functions (only work in Salesforce context)
+        function testScreenPop() {
+            if (window.sforce && window.sforce.opencti) {
+                window.sforce.opencti.screenPop({
+                    type: window.sforce.opencti.SCREENPOP_TYPE.URL,
+                    params: { url: 'https://salesforce.com' }
+                });
+            } else {
+                alert('Screen pop only works within Salesforce environment');
+            }
+        }
+
+        function testClickToDial() {
+            if (window.sforce && window.sforce.opencti) {
+                window.sforce.opencti.enableClickToDial();
+                alert('Click-to-dial enabled');
+            } else {
+                alert('Click-to-dial only works within Salesforce environment');
+            }
+        }
+
+        function testPresence() {
+            if (window.Microsoft && window.Microsoft.CCaaS && window.Microsoft.CCaaS.EmbedSDK) {
+                const sdk = window.Microsoft.CCaaS.EmbedSDK;
+                sdk.presence.getPresence().then(presence => {
+                    alert('Current presence: ' + JSON.stringify(presence));
+                }).catch(err => {
+                    alert('Presence check failed: ' + err.message);
+                });
+            } else {
+                alert('Presence check only works when CCaaS SDK is loaded');
+            }
+        }
+
+        // Initialize CTI Driver if available
+        if (window.CCaaS && window.CCaaS.CTIDriver) {
+            const driver = new window.CCaaS.CTIDriver();
+            driver.initialize().then(() => {
+                console.log('CTI Driver initialized successfully');
+                driver.bindEvents();
+                console.log('CTI Driver events bound');
+            }).catch(err => {
+                console.error('CTI Driver initialization failed:', err);
+            });
+        }
+
+        // Update status on load
+        setTimeout(updateStatus, 1000);
+    </script>
+</body>
+</html>
